@@ -1,0 +1,81 @@
+#include <iostream>
+#include <fstream>
+#include <thread>
+#include <vector>
+#include <zlib.h>
+#include <chrono>
+
+// Structure to hold compression/decompression parameters
+struct CompressionParams {
+    std::string inputFilename;
+    std::string outputFilename;
+    int compressionLevel;
+};
+
+// Function to compress a file
+void compressFile(const CompressionParams& params) {
+    gzFile inputFile = gzopen(params.inputFilename.c_str(), "rb");
+    gzFile outputFile = gzopen(params.outputFilename.c_str(), "wb");
+
+    if (!inputFile || !outputFile) {
+        std::cerr << "Error opening files." << std::endl;
+        return;
+    }
+
+    char buffer[4096];
+    int bytesRead;
+
+    while ((bytesRead = gzread(inputFile, buffer, 4096)) > 0) {
+        gzwrite(outputFile, buffer, bytesRead);
+    }
+
+    gzclose(inputFile);
+    gzclose(outputFile);
+}
+
+// Function to decompress a file
+void decompressFile(const CompressionParams& params) {
+    gzFile inputFile = gzopen(params.inputFilename.c_str(), "rb");
+    gzFile outputFile = gzopen(params.outputFilename.c_str(), "wb");
+
+    if (!inputFile || !outputFile) {
+        std::cerr << "Error opening files." << std::endl;
+        return;
+    }
+
+    char buffer[4096];
+    int bytesRead;
+
+    while ((bytesRead = gzread(inputFile, buffer, 4096)) > 0) {
+        gzwrite(outputFile, buffer, bytesRead);
+    }
+
+    gzclose(inputFile);
+    gzclose(outputFile);
+}
+
+int main() {
+    // Set compression parameters
+    CompressionParams params;
+    params.inputFilename = "input.txt";
+    params.outputFilename = "output.gz";
+    params.compressionLevel = Z_DEFAULT_COMPRESSION;
+
+    // Create threads for compression and decompression
+    std::thread compressionThread(compressFile, params);
+    std::thread decompressionThread(decompressFile, params);
+
+    // Measure execution time
+    auto startTime = std::chrono::high_resolution_clock::now();
+
+    // Wait for threads to finish
+    compressionThread.join();
+    decompressionThread.join();
+
+    auto endTime = std::chrono::high_resolution_clock::now();
+    auto executionTime = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime).count();
+
+    std::cout << "Execution time: " << executionTime << " ms" << std::endl;
+
+    return 0;
+}
