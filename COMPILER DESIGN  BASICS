@@ -1,0 +1,146 @@
+
+
+#include <iostream>
+#include <string>
+#include <cctype>
+
+using namespace std;
+
+// Token types
+enum TokenType {
+    NUMBER,
+    PLUS,
+    MINUS,
+    MULT,
+    DIV,
+    LPAREN,
+    RPAREN,
+    END
+};
+
+// Token structure
+struct Token {
+    TokenType type;
+    double value;
+};
+
+// Lexer class
+class Lexer {
+public:
+    Lexer(const string& input) : input_(input), pos_(0) {}
+
+    Token getNextToken() {
+        while (isspace(input_[pos_])) {
+            pos_++;
+        }
+
+        if (isdigit(input_[pos_])) {
+            double value = 0;
+            while (isdigit(input_[pos_])) {
+                value = value * 10 + (input_[pos_] - '0');
+                pos_++;
+            }
+            return Token{NUMBER, value};
+        }
+
+        switch (input_[pos_]) {
+            case '+':
+                pos_++;
+                return Token{PLUS, 0};
+            case '-':
+                pos_++;
+                return Token{MINUS, 0};
+            case '*':
+                pos_++;
+                return Token{MULT, 0};
+            case '/':
+                pos_++;
+                return Token{DIV, 0};
+            case '(':
+                pos_++;
+                return Token{LPAREN, 0};
+            case ')':
+                pos_++;
+                return Token{RPAREN, 0};
+            default:
+                return Token{END, 0};
+        }
+    }
+
+private:
+    const string& input_;
+    size_t pos_;
+};
+
+// Parser class
+class Parser {
+public:
+    Parser(Lexer& lexer) : lexer_(lexer) {}
+
+    double parseExpression() {
+        double value = parseTerm();
+
+        while (true) {
+            Token token = lexer_.getNextToken();
+
+            if (token.type == PLUS) {
+                value += parseTerm();
+            } else if (token.type == MINUS) {
+                value -= parseTerm();
+            } else {
+                return value;
+            }
+        }
+    }
+
+    double parseTerm() {
+        double value = parseFactor();
+
+        while (true) {
+            Token token = lexer_.getNextToken();
+
+            if (token.type == MULT) {
+                value *= parseFactor();
+            } else if (token.type == DIV) {
+                value /= parseFactor();
+            } else {
+                return value;
+            }
+        }
+    }
+
+    double parseFactor() {
+        Token token = lexer_.getNextToken();
+
+        if (token.type == NUMBER) {
+            return token.value;
+        } else if (token.type == LPAREN) {
+            double value = parseExpression();
+            lexer_.getNextToken(); // Consume RPAREN
+            return value;
+        } else {
+            throw runtime_error("Invalid factor");
+        }
+    }
+
+private:
+    Lexer& lexer_;
+};
+
+int main() {
+    string input;
+    cout << "Enter an arithmetic expression: ";
+    getline(cin, input);
+
+    Lexer lexer(input);
+    Parser parser(lexer);
+
+    try {
+        double result = parser.parseExpression();
+        cout << "Result: " << result << endl;
+    } catch (const exception& e) {
+        cout << "Error: " << e.what() << endl;
+    }
+
+    return 0;
+}
