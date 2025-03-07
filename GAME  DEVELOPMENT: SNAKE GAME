@@ -1,0 +1,161 @@
+#include <SFML/Graphics.hpp>
+#include <SFML/Audio.hpp>
+#include <vector>
+#include <ctime>
+#include <cstdlib>
+using namespace sf;
+using namespace std;
+// Constants for game settings
+const int WIDTH = 800;
+const int HEIGHT = 600;
+const int BLOCK_SIZE = 20;
+
+// Enum for directions
+enum Direction { UP, DOWN, LEFT, RIGHT };
+
+// Structure for snake body
+struct Body {
+    RectangleShape shape;
+};
+
+int main() {
+    // Initialize game settings
+    RenderWindow window(VideoMode(WIDTH, HEIGHT), "Snake Game");
+    Clock clock;
+    Time deltaTime;
+
+    // Initialize snake body
+    vector<Body> snake;
+    snake.push_back(Body());
+    snake.back().shape.setSize(Vector2f(BLOCK_SIZE, BLOCK_SIZE));
+    snake.back().shape.setFillColor(Color::Green);
+    snake.back().shape.setPosition(Vector2f(WIDTH / 2, HEIGHT / 2));
+
+    // Initialize food
+    RectangleShape food;
+    food.setSize(Vector2f(BLOCK_SIZE, BLOCK_SIZE));
+    food.setFillColor(Color::Red);
+    food.setPosition(Vector2f(rand() % (WIDTH / BLOCK_SIZE)) * BLOCK_SIZE, rand() % (HEIGHT / BLOCK_SIZE) * BLOCK_SIZE));
+
+    // Initialize direction
+    Direction direction = RIGHT;
+
+    // Initialize score
+    int score = 0;
+
+    // Initialize font
+    Font font;
+    font.loadFromFile("arial.ttf");
+
+    // Initialize text
+    Text text;
+    text.setFont(font);
+    text.setCharacterSize(24);
+    text.setFillColor(Color::White);
+    text.setString("Score: 0");
+
+    // Initialize sound effects
+    SoundBuffer eatBuffer;
+    eatBuffer.loadFromFile("eat.wav");
+    Sound eatSound;
+    eatSound.setBuffer(eatBuffer);
+
+    SoundBuffer crashBuffer;
+    crashBuffer.loadFromFile("crash.wav");
+    Sound crashSound;
+    crashSound.setBuffer(crashBuffer);
+
+    while (window.isOpen()) {
+        Event event;
+        while (window.pollEvent(event)) {
+            if (event.type == Event::Closed) {
+                window.close();
+            }
+
+            if (event.type == Event::KeyPressed) {
+                if (event.key.code == Keyboard::Up && direction != DOWN) {
+                    direction = UP;
+                }
+
+                if (event.key.code == Keyboard::Down && direction != UP) {
+                    direction = DOWN;
+                }
+
+                if (event.key.code == Keyboard::Left && direction != RIGHT) {
+                    direction = LEFT;
+                }
+
+                if (event.key.code == Keyboard::Right && direction != LEFT) {
+                    direction = RIGHT;
+                }
+            }
+        }
+
+        deltaTime = clock.restart();
+
+        // Move snake
+        for (int i = snake.size() - 1; i > 0; i--) {
+            snake[i].shape.setPosition(snake[i - 1].shape.getPosition());
+        }
+
+        switch (direction) {
+            case UP:
+                snake[0].shape.move(0, -BLOCK_SIZE);
+                break;
+            case DOWN:
+                snake[0].shape.move(0, BLOCK_SIZE);
+                break;
+            case LEFT:
+                snake[0].shape.move(-BLOCK_SIZE, 0);
+                break;
+            case RIGHT:
+                snake[0].shape.move(BLOCK_SIZE, 0);
+                break;
+        }
+
+        // Check collision with food
+        if (snake[0].shape.getGlobalBounds().intersects(food.getGlobalBounds())) {
+            eatSound.play();
+
+            // Increase score
+            score++;
+            text.setString("Score: " + to_string(score));
+
+            // Add new body part
+            Body newBody;
+            newBody.shape.setSize(Vector2f(BLOCK_SIZE, BLOCK_SIZE));
+            newBody.shape.setFillColor(Color::Green);
+            snake.push_back(newBody);
+
+            // Move food to new position
+            food.setPosition(Vector2f(rand() % (WIDTH / BLOCK_SIZE)) * BLOCK_SIZE, rand() % (HEIGHT / BLOCK_SIZE) * BLOCK_SIZE));
+        }
+
+        // Check collision with wall or self
+        if (snake[0].shape.getPosition().x < 0 || snake[0].shape.getPosition().x >= WIDTH || snake[0].shape.getPosition().y < 0 || snake[0].shape.getPosition().y >= HEIGHT) {
+            crashSound.play();
+            window.close();
+        }
+
+        for (int i = 1; i < snake.size(); i++) {
+            if (snake[0].shape.getGlobalBounds().intersects(snake[i].shape.getGlobalBounds())) {
+                crashSound.play();
+                window.close();
+            }
+        }
+
+        window.clear();
+        window.draw(food);
+
+        for (const auto& body : snake) {
+            window.draw(body.shape);
+        }
+
+        window.draw(text);
+        window.display();
+    }
+
+    return 0;
+}
+
+
